@@ -76,32 +76,37 @@ int socket_read(int fd, struct socket_data *data)
 	return 0;
 }
 
-int socket_write(int fd, struct socket_data *data)
+int socket_write(int fd, const struct socket_data *data)
 {
-	union {
-		struct cmsghdr cmsghdr;
-		char buf[CMSG_SPACE(data->fds_len * sizeof(int))];
-	} cmsgbuf;
-	struct iovec iov = {
-		.iov_base = data->buffer,
-		.iov_len = data->buffer_len,
-	};
-	struct msghdr msg = {
-		.msg_name = NULL,
-		.msg_namelen = 0,
-		.msg_iov = &iov,
-		.msg_iovlen = 1,
-		.msg_control = cmsgbuf.buf,
-		.msg_controllen = CMSG_LEN(sizeof(cmsgbuf.buf)),
-	};
-	struct cmsghdr *hdr = CMSG_FIRSTHDR(&msg);
+	if (data->fds_len) {
+		union {
+			struct cmsghdr cmsghdr;
+			char buf[CMSG_SPACE(data->fds_len * sizeof(int))];
+		} cmsgbuf;
+		struct iovec iov = {
+			.iov_base = data->buffer,
+			.iov_len = data->buffer_len,
+		};
+		struct msghdr msg = {
+			.msg_name = NULL,
+			.msg_namelen = 0,
+			.msg_iov = &iov,
+			.msg_iovlen = 1,
+			.msg_control = cmsgbuf.buf,
+			.msg_controllen = CMSG_LEN(sizeof(cmsgbuf.buf)),
+		};
+		struct cmsghdr *hdr = CMSG_FIRSTHDR(&msg);
 
-	hdr->cmsg_len = msg.msg_controllen;
-	hdr->cmsg_level = SOL_SOCKET;
-	hdr->cmsg_type = SCM_RIGHTS;
-	memcpy(CMSG_DATA(hdr), data->fds, data->fds_len * sizeof(int));
+		hdr->cmsg_len = msg.msg_controllen;
+		hdr->cmsg_level = SOL_SOCKET;
+		hdr->cmsg_type = SCM_RIGHTS;
+		memcpy(CMSG_DATA(hdr), data->fds, data->fds_len * sizeof(int));
 
-	assert(sendmsg(fd, &msg, 0) >= 0);
+		assert(sendmsg(fd, &msg, 0) >= 0);
+	}
+	else {
+		assert(write(fd, data->buffer, data->buffer_len) == data->buffer_len);
+	}
 	return 0;
 }
 

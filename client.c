@@ -1,38 +1,65 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <client.h>
 #include <dispatch.h>
-#include <socket.h>
+#include <xproto.h>
 
-
-static void client_read_handler(struct dispatch_data *data)
+static struct client *client_create_data(int fd)
 {
-	int fds[10];
-	char buffer[4096];
-	struct socket_data sd = {
-		.buffer = buffer,
-		.buffer_len = 4096,
-		.fds = fds,
-		.fds_len = 10,
-	};
-
-	assert(!socket_read(data->fd, &sd));
-	printf("bl=%d b=%x %x\n", sd.buffer_len, buffer[0], buffer[1]);
-
-	close(data->fd);
-	free(data);
+	struct client *client = malloc(sizeof(*client));
+	if (!client)
+		return NULL;
+	client->fd = fd;
+	client->auth = 0;
+	client->bend = 0;
+	client->fend = 0;
+	return client;
 }
 
-static void client_write_handler(struct dispatch_data *data)
+static int client_read_handler(struct dispatch_data *data)
 {
-	
+	struct client *client = data->data;
+
+	if (client->bend != CLIENT_MAX_BUFFER_SIZE && client->fend != CLIENT_MAX_FDS_SIZE) {
+		struct socket_data sd = {
+			.buffer = client->buffer + client->bend,
+			.buffer_len = CLIENT_MAX_BUFFER_SIZE - client->bend,
+			.fds = client->fds + client->fend,
+			.fds_len = CLIENT_MAX_FDS_SIZE - client->fend,
+		};
+		assert(!socket_read(data->fd, &sd));
+		client->bend += sd.buffer_len;
+		client->fend += sd.fds_len;
+	}
+
+	int i = 0;
+	while (1) {
+		int len = xproto_handle_client_request(client, client->buffer + i, client->bend - i);
+		if (len > 0)
+			i += len;
+		else if (len == 0)
+			break;
+		else
+			return len;
+	}
+
+	if (i && i != client->bend)
+		memmove(client->buffer, client->buffer + i, client->bend - i);
+	client->bend -= i;
+	return 0;
 }
 
-static void client_error_handler(struct dispatch_data *data)
+static int client_write_handler(struct dispatch_data *data)
 {
-	
+	return 0;
+}
+
+static int client_error_handler(struct dispatch_data *data)
+{
+	return 0;
 }
 
 static struct dispatch_handlers client_handlers = {
@@ -45,7 +72,28 @@ void client_create(int fd)
 {
 	struct dispatch_data *data = malloc(sizeof(*data));
 	assert(data);
+
+	struct client *client = client_create_data(fd);
+	assert(client);
+
 	data->fd = fd;
+	data->data = client;
 	data->handlers = &client_handlers;
 	dispatch_add(data);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

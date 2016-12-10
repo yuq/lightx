@@ -10,20 +10,21 @@
 
 #define SOCKET_PATH "/tmp/.X11-unix/X1"
 
-static void server_read_handler(struct dispatch_data *data)
+static int server_read_handler(struct dispatch_data *data)
 {
 	int fd = socket_accept(data->fd);
 	client_create(fd);
+	return 0;
 }
 
-static void server_write_handler(struct dispatch_data *data)
+static int server_write_handler(struct dispatch_data *data)
 {
-	
+	return 0;
 }
 
-static void server_error_handler(struct dispatch_data *data)
+static int server_error_handler(struct dispatch_data *data)
 {
-	
+	return 0;
 }
 
 static struct dispatch_handlers server_handlers = {
@@ -46,22 +47,3 @@ void server_init(void)
 	int fd = socket_create(SOCKET_PATH);
 	server_create(fd);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,7 @@
 #include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #include <fcntl.h>
 #include <sys/epoll.h>
 
@@ -17,6 +20,18 @@ void dispatch_add(struct dispatch_data *data)
 	event.events = EPOLLIN;
 	event.data.ptr = data;
 	assert(!epoll_ctl(dispatch_fd, EPOLL_CTL_ADD, data->fd, &event));
+
+	printf("dispatch add %d\n", data->fd);
+}
+
+void dispatch_remove(struct dispatch_data *data)
+{
+	printf("dispatch remove %d\n", data->fd);
+
+	if (data->data)
+		free(data->data);
+	close(data->fd);
+	free(data);
 }
 
 void dispatch_loop(void)
@@ -30,12 +45,26 @@ void dispatch_loop(void)
 		for (i = 0; i < n; i++) {
 			struct dispatch_data *data = events[i].data.ptr;
 
-			if (events[i].events & EPOLLIN)
-				data->handlers->read_handler(data);
-			if (events[i].events & EPOLLOUT)
-				data->handlers->write_handler(data);
-			if (events[i].events & EPOLLERR)
-				data->handlers->error_handler(data);
+			if (events[i].events & EPOLLIN) {
+				if (data->handlers->read_handler(data)) {
+					dispatch_remove(data);
+					continue;
+				}
+			}
+
+			if (events[i].events & EPOLLOUT) {
+				if (data->handlers->write_handler(data)) {
+					dispatch_remove(data);
+					continue;
+				}
+			}
+
+			if (events[i].events & EPOLLERR) {
+				if (data->handlers->error_handler(data)) {
+					dispatch_remove(data);
+					continue;
+				}
+			}
 		}
 	}
 }
