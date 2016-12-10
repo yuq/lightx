@@ -2,10 +2,10 @@
 #include <assert.h>
 #include <unistd.h>
 
-#include <socket.h>
-#include <dispatch.h>
-#include <server.h>
-#include <client.h>
+#include <lightx/socket.h>
+#include <lightx/dispatch.h>
+#include <lightx/server.h>
+#include <lightx/client.h>
 
 
 #define SOCKET_PATH "/tmp/.X11-unix/X1"

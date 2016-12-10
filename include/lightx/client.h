@@ -1,7 +1,7 @@
 #ifndef _LIGHTX_CLIENT_H_
 #define _LIGHTX_CLIENT_H_
 
-#include <socket.h>
+#include <lightx/socket.h>
 
 #define CLIENT_MAX_BUFFER_SIZE 0x100000
 #define CLIENT_MAX_FDS_SIZE 10

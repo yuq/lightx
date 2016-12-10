@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <client.h>
-#include <dispatch.h>
-#include <xproto.h>
+#include <lightx/client.h>
+#include <lightx/dispatch.h>
+#include <lightx/xproto.h>
 
 static struct client *client_create_data(int fd)
 {

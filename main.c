@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include <dispatch.h>
-#include <server.h>
+#include <lightx/dispatch.h>
+#include <lightx/server.h>
 
 int main(int argc, char *argv)
 {

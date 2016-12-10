@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 
-#include <dispatch.h>
+#include <lightx/dispatch.h>
 
 static int dispatch_fd;
 

@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include <socket.h>
+#include <lightx/socket.h>
 
 int socket_create(const char *path)
 {
