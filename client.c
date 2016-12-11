@@ -14,6 +14,7 @@ static struct client *client_create_data(int fd)
 		return NULL;
 	client->fd = fd;
 	client->auth = 0;
+	client->sequence_number = 0;
 	client->bend = 0;
 	client->fend = 0;
 	return client;

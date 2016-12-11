@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <lightx/xproto.h>
 #include <lightx/client.h>
@@ -7,6 +8,21 @@
 
 #include <X11/X.h>
 #include <X11/Xproto.h>
+
+static int xproto_error(struct client *client, uint8_t code, uint32_t resource,
+						uint8_t major, uint16_t minor)
+{
+	xError error = {
+		.type = X_Error,
+		.errorCode = code,
+		.sequenceNumber = client->sequence_number,
+		.resourceID = resource,
+		.minorCode = minor,
+		.majorCode = major,
+	};
+
+	return client_write(client, &error, sz_xError, NULL, 0);
+}
 
 static int xproto_setup_client(struct client *client, const char *msg, int len)
 {
@@ -129,27 +145,87 @@ static int xproto_setup_client(struct client *client, const char *msg, int len)
 	return auth_size;
 }
 
-static int xproto_null(struct client *client, const xReq *req)
+static int xproto_null(struct client *client, void *req)
 {
-	printf("null req type=%d len=%d\n", req->reqType, req->length);
-	return -1;
+	const xReq *r = req;
+	printf("null req type=%d len=%d\n", r->reqType, r->length);
+	return xproto_error(client, BadRequest, 0, r->reqType, 0);
 }
 
-static int xproto_query_extension(struct client *client, const xReq *req)
+static struct xproto_extension *xproto_extensions_head = NULL;
+static struct xproto_extension *xproto_extensions_tail = NULL;
+
+static int xproto_query_extension(struct client *client, void *req)
 {
-	printf("query extension req type=%d len=%d\n", req->reqType, req->length);
-	return -1;
+	const xQueryExtensionReq *r = req;
+
+	if (r->length * 4 - sz_xQueryExtensionReq != r->nbytes)
+		return xproto_error(client, BadValue, 0, r->reqType, 0);
+
+	xQueryExtensionReply reply = {
+		.type = X_Reply,
+		.sequenceNumber = client->sequence_number,
+		.length = 0,
+		.present = xFalse,
+		.major_opcode = 0,
+		.first_event = 0,
+		.first_error = 0,
+	};
+	struct xproto_extension *ext;
+	for (ext = xproto_extensions_head; ext; ext = ext->next) {
+		if (!strncmp(ext->name, (const char *)(r + 1), r->nbytes)) {
+			reply.present = xTrue;
+			reply.major_opcode = ext->opcode;
+			reply.first_event = ext->event;
+			reply.first_error = ext->error;
+			break;
+		}
+	}
+
+	return client_write(client, &reply, sz_xQueryExtensionReply, NULL, 0);
 }
 
-static int (*xproto_handlers[256])(struct client *, const xReq *) = {
+static xproto_handler_t xproto_handlers[256] = {
 	[0 ... 97] = xproto_null,
 	[98] = xproto_query_extension,
 	[99 ... 255] = xproto_null,
 };
+static int num_opcode = 128;
+static int num_event = LASTEvent;
+static int num_error = FirstExtensionError;
 
-static int xproto_request_handler(struct client *client, const char *msg, int len)
+void xproto_extension_register(struct xproto_extension *extension)
 {
-	const xReq *req = (const xReq *)msg;
+	if (xproto_extensions_tail) {
+		xproto_extensions_tail->next = extension;
+		xproto_extensions_tail = extension;
+	}
+	else {
+		xproto_extensions_head = extension;
+		xproto_extensions_tail = extension;
+	}
+	extension->next = NULL;
+
+	if (extension->num_opcode) {
+		extension->opcode = num_opcode;
+		num_opcode += extension->num_opcode;
+		memcpy(xproto_handlers + num_opcode, extension->handlers, extension->num_opcode);
+	}
+
+	if (extension->num_event) {
+		extension->event = num_event;
+		num_event += extension->num_event;
+	}
+
+	if (extension->num_error) {
+		extension->error = num_error;
+		num_error += extension->num_error;
+	}
+}
+
+static int xproto_request_handler(struct client *client, void *msg, int len)
+{
+	xReq *req = msg;
 
 	if (len < sizeof(*req))
 		return 0;
@@ -167,7 +243,7 @@ static int xproto_request_handler(struct client *client, const char *msg, int le
 	return size;
 }
 
-int xproto_handle_client_request(struct client *client, const char *msg, int len)
+int xproto_handle_client_request(struct client *client, void *msg, int len)
 {
 	int ret;
 
@@ -178,5 +254,9 @@ int xproto_handle_client_request(struct client *client, const char *msg, int len
 		if (ret > 0)
 			client->auth = 1;
 	}
+
+	if (ret > 0)
+		client->sequence_number++;
+
 	return ret;
 }

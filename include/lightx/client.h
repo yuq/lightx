@@ -1,6 +1,7 @@
 #ifndef _LIGHTX_CLIENT_H_
 #define _LIGHTX_CLIENT_H_
 
+#include <stdint.h>
 #include <lightx/socket.h>
 
 #define CLIENT_MAX_BUFFER_SIZE 0x100000
@@ -10,6 +11,7 @@ struct client {
 	int fd;
 
 	int auth;
+	uint16_t sequence_number;
 
 	char buffer[CLIENT_MAX_BUFFER_SIZE];
 	int bend;
@@ -20,7 +22,7 @@ struct client {
 
 void client_create(int fd);
 
-static inline int client_write(struct client *client, char *buffer, int buffer_len,
+static inline int client_write(struct client *client, void *buffer, int buffer_len,
 							   int *fds, int fds_len)
 {
 	struct socket_data sd = {
