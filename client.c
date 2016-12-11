@@ -32,6 +32,11 @@ static int client_read_handler(struct dispatch_data *data)
 			.fds_len = CLIENT_MAX_FDS_SIZE - client->fend,
 		};
 		assert(!socket_read(data->fd, &sd));
+
+		// client has closed this connection
+		if (sd.buffer_len == 0 && sd.fds_len == 0)
+			return -1;
+
 		client->bend += sd.buffer_len;
 		client->fend += sd.fds_len;
 	}
@@ -55,12 +60,12 @@ static int client_read_handler(struct dispatch_data *data)
 
 static int client_write_handler(struct dispatch_data *data)
 {
-	return 0;
+	return -1;
 }
 
 static int client_error_handler(struct dispatch_data *data)
 {
-	return 0;
+	return -1;
 }
 
 static struct dispatch_handlers client_handlers = {
