@@ -148,8 +148,30 @@ static int xproto_setup_client(struct client *client, const char *msg, int len)
 static int xproto_null(struct client *client, void *req)
 {
 	const xReq *r = req;
-	printf("null req type=%d len=%d\n", r->reqType, r->length);
+	printf("%d: null req type=%d len=%d\n", client->fd, r->reqType, r->length);
 	return xproto_error(client, BadRequest, 0, r->reqType, 0);
+}
+
+static int xproto_get_property(struct client *client, void *req)
+{
+	const xGetPropertyReq *r = req;
+	xGetPropertyReply reply = {
+		.type = X_Reply,
+		.sequenceNumber = client->sequence_number,
+		.length = 0,
+		.propertyType = None,
+		.bytesAfter = 0,
+		.nItems = 0,
+	};
+	return client_write(client, &reply, sz_xGetPropertyReply, NULL, 0);
+}
+
+static int xproto_create_gc(struct client *client, void *req)
+{
+	const xCreateGCReq *r = req;
+	printf("%d: CreateGC gc=0x%08x drawable=0x%08x\n", client->fd, 
+		   (unsigned int)r->gc, (unsigned int)r->drawable);
+	return 0;
 }
 
 static struct xproto_extension *xproto_extensions_head = NULL;
@@ -159,7 +181,7 @@ static int xproto_query_extension(struct client *client, void *req)
 {
 	const xQueryExtensionReq *r = req;
 
-	if (r->length * 4 - sz_xQueryExtensionReq != r->nbytes)
+	if ((int)r->length * 4 - sz_xQueryExtensionReq != pad_to_int32(r->nbytes))
 		return xproto_error(client, BadValue, 0, r->reqType, 0);
 
 	xQueryExtensionReply reply = {
@@ -186,7 +208,11 @@ static int xproto_query_extension(struct client *client, void *req)
 }
 
 static xproto_handler_t xproto_handlers[256] = {
-	[0 ... 97] = xproto_null,
+	[0 ... 19] = xproto_null,
+	[20] = xproto_get_property,
+	[21 ... 54] = xproto_null,
+	[55] = xproto_create_gc,
+	[56 ... 97] = xproto_null,
 	[98] = xproto_query_extension,
 	[99 ... 255] = xproto_null,
 };
@@ -230,9 +256,7 @@ static int xproto_request_handler(struct client *client, void *msg, int len)
 	if (len < sizeof(*req))
 		return 0;
 
-	assert(req->length >= sizeof(*req));
-
-	int size = req->length * 4;
+	int size = (int)req->length * 4;
 	if (len < size)
 		return 0;
 
