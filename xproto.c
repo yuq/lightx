@@ -9,8 +9,8 @@
 #include <X11/X.h>
 #include <X11/Xproto.h>
 
-static int xproto_error(struct client *client, uint8_t code, uint32_t resource,
-						uint8_t major, uint16_t minor)
+int xproto_error(struct client *client, uint8_t code, uint32_t resource,
+				 uint8_t major, uint16_t minor)
 {
 	xError error = {
 		.type = X_Error,
@@ -174,8 +174,7 @@ static int xproto_create_gc(struct client *client, void *req)
 	return 0;
 }
 
-static struct xproto_extension *xproto_extensions_head = NULL;
-static struct xproto_extension *xproto_extensions_tail = NULL;
+static struct xproto_extension *xproto_extensions = NULL;
 
 static int xproto_query_extension(struct client *client, void *req)
 {
@@ -194,7 +193,7 @@ static int xproto_query_extension(struct client *client, void *req)
 		.first_error = 0,
 	};
 	struct xproto_extension *ext;
-	for (ext = xproto_extensions_head; ext; ext = ext->next) {
+	for (ext = xproto_extensions; ext; ext = ext->next) {
 		if (!strncmp(ext->name, (const char *)(r + 1), r->nbytes)) {
 			reply.present = xTrue;
 			reply.major_opcode = ext->opcode;
@@ -222,20 +221,12 @@ static int num_error = FirstExtensionError;
 
 void xproto_extension_register(struct xproto_extension *extension)
 {
-	if (xproto_extensions_tail) {
-		xproto_extensions_tail->next = extension;
-		xproto_extensions_tail = extension;
-	}
-	else {
-		xproto_extensions_head = extension;
-		xproto_extensions_tail = extension;
-	}
-	extension->next = NULL;
+	extension->next = xproto_extensions;
+	xproto_extensions = extension;
 
-	if (extension->num_opcode) {
-		extension->opcode = num_opcode;
-		num_opcode += extension->num_opcode;
-		memcpy(xproto_handlers + num_opcode, extension->handlers, extension->num_opcode);
+	if (extension->has_opcode) {
+		xproto_handlers[num_opcode] = extension->handler;
+		extension->opcode = num_opcode++;
 	}
 
 	if (extension->num_event) {
