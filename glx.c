@@ -24,8 +24,10 @@ static int glx_ext_handler(struct client *client, void *req)
 {
 	const xReq *r = req;
 
-	if (r->data == X_GLXQueryVersion)
+	switch (r->data) {
+	case X_GLXQueryVersion:
 		return glx_query_version(client, req);
+	}
 
 	printf("%d: glx null req code=%d len=%d\n", client->fd, r->data, r->length);
 	return xproto_error(client, BadRequest, 0, r->reqType, r->data);
@@ -43,3 +45,5 @@ void glx_extension_init(void)
 {
 	xproto_extension_register(&glx_extension);
 }
+
+
