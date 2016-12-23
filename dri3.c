@@ -10,7 +10,7 @@
 static int dri3_ext_handler(struct client *client, void *req)
 {
 	const xReq *r = req;
-	printf("%d: glx null req code=%d len=%d\n", client->fd, r->data, r->length);
+	printf("%d: dri3 null req code=%d len=%d\n", client->fd, r->data, r->length);
 	return xproto_error(client, BadRequest, 0, r->reqType, r->data);
 }
 
@@ -26,13 +26,3 @@ void dri3_extension_init(void)
 {
 	xproto_extension_register(&dri3_extension);
 }
-
-
-
-
-
-
-
-
-
-

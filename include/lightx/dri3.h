@@ -4,12 +4,3 @@
 void dri3_extension_init(void);
 
 #endif
-
-
-
-
-
-
-
-
-

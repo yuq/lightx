@@ -4,13 +4,3 @@
 void glx_extension_init(void);
 
 #endif
-
-
-
-
-
-
-
-
-
-
