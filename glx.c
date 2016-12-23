@@ -43,17 +43,3 @@ void glx_extension_init(void)
 {
 	xproto_extension_register(&glx_extension);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
