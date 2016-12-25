@@ -33,6 +33,9 @@ static int glx_query_server_string(struct client *client, void *req)
 	case GLX_VERSION:
 		ptr = "1.4";
         break;
+	case GLX_EXTENSIONS:
+		ptr = "";
+		break;
 	default:
 		return xproto_error(client, BadValue, 0, r->reqType, r->glxCode);
 	}
