@@ -215,8 +215,21 @@ static int xproto_create_colormap(struct client *client, void *req)
 	return 0;
 }
 
+static int xproto_create_window(struct client *client, void *req)
+{
+	const xCreateWindowReq *r = req;
+	printf("%d: CreatWindow depth=%d wid=0x%x parent=0x%x "
+		   "x=%d y=%d width=%d height=%d board=%d visual=0x%x mask=0x%x\n",
+		   client->fd, r->depth, (unsigned int)r->wid, (unsigned int)r->parent,
+		   r->x, r->y, r->width, r->height, r->borderWidth,
+		   (unsigned int)r->visual, (unsigned int)r->mask);
+	return 0;
+}
+
 static xproto_handler_t xproto_handlers[256] = {
-	[0 ... 19] = xproto_null,
+	[0] = xproto_null,
+	[X_CreateWindow] = xproto_create_window,
+	[2 ... 19] = xproto_null,
 	[X_GetProperty] = xproto_get_property,
 	[21 ... 54] = xproto_null,
 	[X_CreateGC] = xproto_create_gc,
