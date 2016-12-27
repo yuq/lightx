@@ -206,13 +206,24 @@ static int xproto_query_extension(struct client *client, void *req)
 	return client_write(client, &reply, sz_xQueryExtensionReply, NULL, 0);
 }
 
+static int xproto_create_colormap(struct client *client, void *req)
+{
+	const xCreateColormapReq *r = req;
+	printf("%d: CreateColormap alloc=%d mid=0x%x win=0x%x visual=0x%x\n",
+		   client->fd, r->alloc, (unsigned int)r->mid, (unsigned int)r->window, 
+		   (unsigned int)r->visual);
+	return 0;
+}
+
 static xproto_handler_t xproto_handlers[256] = {
 	[0 ... 19] = xproto_null,
-	[20] = xproto_get_property,
+	[X_GetProperty] = xproto_get_property,
 	[21 ... 54] = xproto_null,
-	[55] = xproto_create_gc,
-	[56 ... 97] = xproto_null,
-	[98] = xproto_query_extension,
+	[X_CreateGC] = xproto_create_gc,
+	[56 ... 77] = xproto_null,
+	[X_CreateColormap] = xproto_create_colormap,
+	[79 ... 97] = xproto_null,
+	[X_QueryExtension] = xproto_query_extension,
 	[99 ... 255] = xproto_null,
 };
 static int num_opcode = 128;
