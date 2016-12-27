@@ -176,6 +176,14 @@ static int glx_get_fb_configs(struct client *client, void *req)
 	return client_write(client, buf, sizeof(buf), NULL, 0);
 }
 
+static int glx_client_info(struct client *client, void *req)
+{
+	const xGLXClientInfoReq *r = req;
+	printf("%d: glx client info: major=%d minor=%d\n",
+		   client->fd, (int)r->major, (int)r->minor);
+	return 0;
+}
+
 static int glx_ext_handler(struct client *client, void *req)
 {
 	const xReq *r = req;
@@ -189,6 +197,8 @@ static int glx_ext_handler(struct client *client, void *req)
 		return glx_get_visual_configs(client, req);
 	case X_GLXGetFBConfigs:
 		return glx_get_fb_configs(client, req);
+	case X_GLXClientInfo:
+		return glx_client_info(client, req);
 	}
 
 	printf("%d: glx null req code=%d len=%d\n", client->fd, r->data, r->length);
