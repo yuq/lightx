@@ -184,6 +184,15 @@ static int glx_client_info(struct client *client, void *req)
 	return 0;
 }
 
+static int glx_create_context(struct client *client, void *req)
+{
+	const xGLXCreateContextReq *r = req;
+	printf("%d: glx create context: context=0x%x visual=0x%x screen=%d isDirect=%d\n",
+		   client->fd, (unsigned int)r->context, (unsigned int)r->visual,
+		   (int)r->screen, r->isDirect);
+	return 0;
+}
+
 static int glx_ext_handler(struct client *client, void *req)
 {
 	const xReq *r = req;
@@ -199,6 +208,8 @@ static int glx_ext_handler(struct client *client, void *req)
 		return glx_get_fb_configs(client, req);
 	case X_GLXClientInfo:
 		return glx_client_info(client, req);
+	case X_GLXCreateContext:
+		return glx_create_context(client, req);
 	}
 
 	printf("%d: glx null req code=%d len=%d\n", client->fd, r->data, r->length);
