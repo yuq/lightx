@@ -8,6 +8,7 @@
 #include <X11/X.h>
 #include <X11/Xproto.h>
 #include <GL/glxproto.h>
+#include <GL/glxtokens.h>
 #include <GL/gl.h>
 
 static int glx_query_version(struct client *client, void *req)
@@ -56,13 +57,14 @@ static int glx_query_server_string(struct client *client, void *req)
 static int glx_get_visual_configs(struct client *client, void *req)
 {
 	const xGLXGetVisualConfigsReq *r = req;
-	uint32_t buf[sz_xGLXGetVisualConfigsReply / sizeof(uint32_t) + (18 + 0) * 2];
+	int num_props = 18 + 0;
+	uint32_t buf[sz_xGLXGetVisualConfigsReply / sizeof(uint32_t) + num_props * 2];
 	xGLXGetVisualConfigsReply *reply = (xGLXGetVisualConfigsReply *)buf;
 	reply->type = X_Reply;
 	reply->sequenceNumber = client->sequence_number;
-	reply->length = (18 + 0) * 2;
+	reply->length = num_props * 2;
 	reply->numVisuals = 2;
-	reply->numProps = 18 + 0;
+	reply->numProps = num_props;
 
 	int p = sz_xGLXGetVisualConfigsReply >> 2;
 
@@ -113,6 +115,67 @@ static int glx_get_visual_configs(struct client *client, void *req)
 	return client_write(client, buf, sizeof(buf), NULL, 0);
 }
 
+static int glx_get_fb_configs(struct client *client, void *req)
+{
+	const xGLXGetFBConfigsReq *r = req;
+	int num_attribs = 21;
+	uint32_t buf[sz_xGLXGetFBConfigsReply / sizeof(uint32_t) + num_attribs * 2 * 2];
+	xGLXGetFBConfigsReply *reply = (xGLXGetFBConfigsReply *)buf;
+	reply->type = X_Reply;
+	reply->sequenceNumber = client->sequence_number;
+	reply->length = num_attribs * 2 * 2;
+	reply->numFBConfigs = 2;
+	reply->numAttribs = num_attribs;
+
+	int p = sz_xGLXGetFBConfigsReply >> 2;
+
+	buf[p++] = GLX_VISUAL_ID; buf[p++] = 0x21;
+	buf[p++] = GLX_FBCONFIG_ID; buf[p++] = 0x22;
+	buf[p++] = GLX_X_RENDERABLE; buf[p++] = GL_TRUE;
+	buf[p++] = GLX_RGBA; buf[p++] = GL_TRUE;
+	buf[p++] = GLX_RENDER_TYPE; buf[p++] = GLX_RGBA_BIT;
+	buf[p++] = GLX_DOUBLEBUFFER; buf[p++] = GL_TRUE;
+	buf[p++] = GLX_STEREO; buf[p++] = GL_FALSE;
+	buf[p++] = GLX_BUFFER_SIZE; buf[p++] = 32;
+	buf[p++] = GLX_LEVEL; buf[p++] = 0;
+	buf[p++] = GLX_AUX_BUFFERS; buf[p++] = 0;
+	buf[p++] = GLX_RED_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_GREEN_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_BLUE_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_ALPHA_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_ACCUM_RED_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_ACCUM_GREEN_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_ACCUM_BLUE_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_ACCUM_ALPHA_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_DEPTH_SIZE; buf[p++] = 24;
+	buf[p++] = GLX_STENCIL_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_X_VISUAL_TYPE; buf[p++] = GLX_TRUE_COLOR;
+
+	buf[p++] = GLX_VISUAL_ID; buf[p++] = 0x41;
+	buf[p++] = GLX_FBCONFIG_ID; buf[p++] = 0x42;
+	buf[p++] = GLX_X_RENDERABLE; buf[p++] = GL_TRUE;
+	buf[p++] = GLX_RGBA; buf[p++] = GL_TRUE;
+	buf[p++] = GLX_RENDER_TYPE; buf[p++] = GLX_RGBA_BIT;
+	buf[p++] = GLX_DOUBLEBUFFER; buf[p++] = GL_TRUE;
+	buf[p++] = GLX_STEREO; buf[p++] = GL_FALSE;
+	buf[p++] = GLX_BUFFER_SIZE; buf[p++] = 32;
+	buf[p++] = GLX_LEVEL; buf[p++] = 0;
+	buf[p++] = GLX_AUX_BUFFERS; buf[p++] = 0;
+	buf[p++] = GLX_RED_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_GREEN_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_BLUE_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_ALPHA_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_ACCUM_RED_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_ACCUM_GREEN_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_ACCUM_BLUE_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_ACCUM_ALPHA_SIZE; buf[p++] = 0;
+	buf[p++] = GLX_DEPTH_SIZE; buf[p++] = 32;
+	buf[p++] = GLX_STENCIL_SIZE; buf[p++] = 8;
+	buf[p++] = GLX_X_VISUAL_TYPE; buf[p++] = GLX_TRUE_COLOR;
+
+	return client_write(client, buf, sizeof(buf), NULL, 0);
+}
+
 static int glx_ext_handler(struct client *client, void *req)
 {
 	const xReq *r = req;
@@ -124,6 +187,8 @@ static int glx_ext_handler(struct client *client, void *req)
 		return glx_query_server_string(client, req);
 	case X_GLXGetVisualConfigs:
 		return glx_get_visual_configs(client, req);
+	case X_GLXGetFBConfigs:
+		return glx_get_fb_configs(client, req);
 	}
 
 	printf("%d: glx null req code=%d len=%d\n", client->fd, r->data, r->length);
