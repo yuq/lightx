@@ -226,10 +226,19 @@ static int xproto_create_window(struct client *client, void *req)
 	return 0;
 }
 
+static int xproto_change_property(struct client *client, void *req)
+{
+	const xChangePropertyReq *r = req;
+	printf("%d: ChangeProperty\n", client->fd);
+	return 0;
+}
+
 static xproto_handler_t xproto_handlers[256] = {
 	[0] = xproto_null,
 	[X_CreateWindow] = xproto_create_window,
-	[2 ... 19] = xproto_null,
+	[2 ... 17] = xproto_null,
+	[X_ChangeProperty] = xproto_change_property,
+	[19] = xproto_null,
 	[X_GetProperty] = xproto_get_property,
 	[21 ... 54] = xproto_null,
 	[X_CreateGC] = xproto_create_gc,
