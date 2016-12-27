@@ -233,10 +233,19 @@ static int xproto_change_property(struct client *client, void *req)
 	return 0;
 }
 
+static int xproto_map_window(struct client *client, void *req)
+{
+	const xResourceReq *r = req;
+	printf("%d: MapWindow 0x%x\n", client->fd, (unsigned int)r->id);
+	return 0;
+}
+
 static xproto_handler_t xproto_handlers[256] = {
 	[0] = xproto_null,
 	[X_CreateWindow] = xproto_create_window,
-	[2 ... 17] = xproto_null,
+	[2 ... 7] = xproto_null,
+	[X_MapWindow] = xproto_map_window,
+	[9 ... 17] = xproto_null,
 	[X_ChangeProperty] = xproto_change_property,
 	[19] = xproto_null,
 	[X_GetProperty] = xproto_get_property,
